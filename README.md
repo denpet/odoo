@@ -20,6 +20,17 @@ addons/custom/            our own modules (tracked in this repo)
 git clone -b 19.0 https://github.com/OCA/vertical-hotel.git addons/vertical-hotel   # first time
 git -C addons/vertical-hotel pull                                                  # update
 ```
+Accounting: Community has no full Accounting app, so we use Odoo Mates' `om_account_accountant`
+(LGPL-3), which turns the Invoicing app into a full **Accounting** app:
+```bash
+git clone -b 19.0 https://github.com/odoomates/odooapps.git addons/odoomates   # first time
+docker compose run --rm odoo -d odoo -i om_account_accountant --stop-after-init
+```
+It adds financial reports (P&L, balance sheet, general ledger, trial balance, aged partner, tax
+reports), assets, budgets, fiscal years/closing, follow-ups, reconciliation, recurring payments, cash
+forecast, currency revaluation and bank statement import. Only install modules from this repo that
+you need: it also contains unrelated apps (WhatsApp, hospital demo, themes).
+
 To add another addon repo, clone it into `addons/<repo>` and append `/mnt/extra-addons/<repo>`
 to `addons_path` in both Odoo config files.
 

@@ -1,3 +1,4 @@
 .env.prod
 config/odoo.prod.conf
 addons/vertical-hotel/
+addons/odoomates/

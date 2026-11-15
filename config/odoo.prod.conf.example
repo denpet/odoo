@@ -1,5 +1,5 @@
 [options]
-addons_path = /mnt/extra-addons/vertical-hotel,/mnt/extra-addons/custom
+addons_path = /mnt/extra-addons/vertical-hotel,/mnt/extra-addons/odoomates,/mnt/extra-addons/custom
 data_dir = /var/lib/odoo
 ; master password for database management -- set a long random value
 admin_passwd = CHANGE_ME
