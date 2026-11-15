@@ -39,8 +39,9 @@ services:
       - odoo
     env_file: .env.prod
     ports:
-      - "80:80"
-      - "443:443"
+      # TEMPORARY until go-live: HTTPS on 8069 only (certificate via DNS-01, so 80 is not needed).
+      # At go-live: "80:80" and "443:443", and see caddy/Caddyfile.
+      - "8069:8069"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

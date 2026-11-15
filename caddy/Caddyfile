@@ -3,7 +3,9 @@
 	acme_dns godaddy {env.GODADDY_API_TOKEN}
 }
 
-{$DOMAIN} {
+# TEMPORARY until go-live: Odoo is served on port 8069 only. At go-live change this back to
+# "{$DOMAIN} {" and the published port in compose.prod.yaml to 80/443.
+{$DOMAIN}:8069 {
 	encode zstd gzip
 
 	# Odoo real-time bus (gevent worker)

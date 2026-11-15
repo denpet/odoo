@@ -61,6 +61,48 @@ Point of Sale → Configuration → Settings → Payment Methods.
 
 Tests: `docker compose run --rm odoo -d odoo -u pos_hotel_room_charge --test-tags /pos_hotel_room_charge --stop-after-init`
 
+## Custom module: `hotel_sirvoy_webhook` (Sirvoy check-in → folio)
+
+Callback URL in Sirvoy (Settings → Sirvoy account → Booking event webhook, Sirvoy Pro):
+`https://eden.ph/api/sirvoy?token=<secret>`. Sirvoy sends from 34.243.166.60, 52.18.11.99,
+63.34.80.48, 54.194.0.85 and 2a05:d018:e34:5300::/56.
+
+Path: Sirvoy → nginx on eden.ph (public) → `https://intranet.eden.ph:8069/api/sirvoy` (Caddy) → Odoo.
+(Port 8069 is temporary until go-live, see Production; then use `https://intranet.eden.ph`.)
+Only `/api/sirvoy` should be exposed publicly; the rest of Odoo stays internal. The nginx on eden.ph needs
+to pass the query string, send SNI, and keep the intranet host name:
+```nginx
+location = /api/sirvoy {
+    proxy_pass https://intranet.eden.ph:8069;   # no URI part: path and ?token= are passed unchanged
+    proxy_ssl_server_name on;                  # Caddy requires SNI
+    proxy_set_header Host intranet.eden.ph;    # Caddy routes by host name
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+The eden.ph server must resolve `intranet.eden.ph` to the Odoo server and reach its port 8069.
+
+- The token is the system parameter `hotel_sirvoy_webhook.token` (Settings → Technical → System Parameters).
+  It is set to a random value on install; replace it with the secret from Sirvoy. It is never stored in git.
+  A missing or wrong token gets 403, and Sirvoy's periodic GET health check gets 200.
+- When a callback has `bookingIsCheckedIn` (and is not cancelled or checked out), each room of the booking gets
+  a new customer `<guest name> #<Sirvoy room name>` and an open (draft) folio:
+  - Check-in is the moment the callback arrives, so POS room charges work right away. Check-out is the
+    departure date at 12:00 (Asia/Manila).
+  - The room line is the Sirvoy `roomTotal`, split over the nights.
+  - Additional items and `totalSurcharges` are added as service lines on the booking's first folio.
+  - All Sirvoy amounts are treated as VAT-inclusive. The lines use a price-included copy of the product's
+    tax, `<tax> (incl.)`, which is created when first needed.
+- Rooms are matched by **Sirvoy Room Name** on the hotel room, or by the Odoo room name if that field is empty.
+- Every callback is logged under Hotel Management → Configuration → **Sirvoy Webhook Events**. Repeated
+  callbacks for the same booking room don't create a second folio. An error such as an unknown room creates
+  nothing. Fix the cause, then click **Reprocess**. Sirvoy always gets 200 once the payload is stored, so
+  it doesn't disable the webhook.
+- Changes in Sirvoy after the folio exists (room moves, new dates, cancellation) are not synced. Adjust the
+  folio by hand.
+
+Install: `docker compose run --rm odoo -d odoo -i hotel_sirvoy_webhook --stop-after-init`
+Tests: `docker compose run --rm odoo -d odoo -u hotel_sirvoy_webhook --test-tags /hotel_sirvoy_webhook --stop-after-init`
+
 ## Development
 
 ```bash
@@ -86,7 +128,13 @@ Prerequisites
    check this first.
 2. Internal clients must resolve `intranet.eden.ph` to the server's internal IP
    (internal DNS record, or a public A record pointing to the private IP).
-3. Ports 80/443 open on the server for internal clients.
+3. Port 8069 open on the server for internal clients (and for the eden.ph nginx).
+
+**Temporary until go-live:** Odoo is served only at https://intranet.eden.ph:8069 (Caddy site
+`{$DOMAIN}:8069`, compose publishes 8069 only; 80 isn't needed because certificates use DNS-01).
+At go-live: change the Caddyfile site back to `{$DOMAIN}`, publish `80:80` and `443:443` instead
+of 8069, update `web.base.url` (Settings → Technical → System Parameters) to
+`https://intranet.eden.ph`, and point the eden.ph nginx `proxy_pass` at port 443.
 
 Setup
 1. `.env.prod` and `config/odoo.prod.conf` have been generated with random passwords. Fill in
@@ -107,7 +155,7 @@ Setup
    Then create the POS setups from the Point of Sale app (Restaurant / Bar cards); each new POS
    automatically gets the *Charge to Room* payment method.
 3. Start: `docker compose -f compose.prod.yaml up -d --build`
-4. Open https://intranet.eden.ph, log in as `admin` / `admin` and **change the admin password immediately**.
+4. Open https://intranet.eden.ph:8069, log in as `admin` / `admin` and **change the admin password immediately**.
 5. Give users hotel access: **Settings → Users → (user) → Hotel Management: Manager or User**, plus
    **Sales** rights (folios are sales orders, so hotel staff also need a Sales group).
    The hotel modules don't assign these groups to anyone, not even `admin`; without them the app

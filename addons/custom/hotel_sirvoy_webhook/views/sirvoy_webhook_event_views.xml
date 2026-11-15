@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sirvoy_webhook_event_list" model="ir.ui.view">
+        <field name="name">sirvoy.webhook.event.list</field>
+        <field name="model">sirvoy.webhook.event</field>
+        <field name="arch" type="xml">
+            <list create="0" decoration-danger="state == 'error'" decoration-success="state == 'done'"
+                  decoration-muted="state == 'ignored'">
+                <field name="create_date" string="Received"/>
+                <field name="booking_id"/>
+                <field name="event"/>
+                <field name="guest_name"/>
+                <field name="checked_in"/>
+                <field name="cancelled" optional="hide"/>
+                <field name="state"/>
+                <field name="message"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sirvoy_webhook_event_form" model="ir.ui.view">
+        <field name="name">sirvoy.webhook.event.form</field>
+        <field name="model">sirvoy.webhook.event</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0">
+                <header>
+                    <button name="action_reprocess" type="object" string="Reprocess" class="btn-primary"
+                            invisible="state not in ('error', 'new')" groups="hotel.group_hotel_manager"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="booking_id"/>
+                            <field name="event"/>
+                            <field name="guest_name"/>
+                            <field name="generated_at"/>
+                        </group>
+                        <group>
+                            <field name="create_date" string="Received"/>
+                            <field name="checked_in"/>
+                            <field name="cancelled"/>
+                        </group>
+                    </group>
+                    <field name="message" nolabel="1"/>
+                    <notebook>
+                        <page string="Folios" name="folios">
+                            <field name="folio_ids"/>
+                        </page>
+                        <page string="Payload" name="payload">
+                            <field name="payload" widget="code" options="{'mode': 'javascript'}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sirvoy_webhook_event_search" model="ir.ui.view">
+        <field name="name">sirvoy.webhook.event.search</field>
+        <field name="model">sirvoy.webhook.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="booking_id"/>
+                <field name="guest_name"/>
+                <filter name="errors" string="Errors" domain="[('state', '=', 'error')]"/>
+                <filter name="done" string="Folio created" domain="[('state', '=', 'done')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sirvoy_webhook_event" model="ir.actions.act_window">
+        <field name="name">Sirvoy Webhook Events</field>
+        <field name="res_model">sirvoy.webhook.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_sirvoy_webhook_event" name="Sirvoy Webhook Events"
+              parent="hotel.hotel_configuration_menu" action="action_sirvoy_webhook_event" sequence="90"/>
+</odoo>
