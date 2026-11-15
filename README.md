@@ -137,6 +137,11 @@ At go-live: change the Caddyfile site back to `{$DOMAIN}`, publish `443:443` ins
 of 8069, update `web.base.url` (Settings → Technical → System Parameters) to
 `https://intranet.eden.ph`, and point the eden.ph nginx `proxy_pass` at port 443.
 
+Quick setup / update: run `./setup.sh` on the server. It clones or updates the addon repos, creates
+`.env.prod` and `config/odoo.prod.conf` if they are missing, initialises the database on the first run,
+installs all modules (and runs `-u all` on later runs; skip that with `--no-upgrade`), checks that every
+module really is installed, and starts the stack. The manual steps below do the same thing.
+
 Setup
 1. `.env.prod` and `config/odoo.prod.conf` have been generated with random passwords. Adjust `workers` in `config/odoo.prod.conf`
    to the server (≈ CPU cores × 2 + 1).
