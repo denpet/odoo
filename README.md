@@ -23,6 +23,10 @@ git -C addons/vertical-hotel pull                                               
 To add another addon repo, clone it into `addons/<repo>` and append `/mnt/extra-addons/<repo>`
 to `addons_path` in both Odoo config files.
 
+Don't edit `addons/vertical-hotel/` directly: it is git-ignored and re-cloned, so changes there are lost.
+Put fixes in an override module under `addons/custom/` instead, e.g. `hotel_reservation_eden`
+(fixes the reservation line dialog not opening without dates, plus a clear "add a room" error).
+
 ## Custom module: `pos_hotel_room_charge` (POS Charge to Room)
 
 Lets the POS (restaurant with tables or plain counter) charge an order to a checked-in guest's folio.
