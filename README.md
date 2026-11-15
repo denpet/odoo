@@ -163,8 +163,10 @@ Setup
 4. Open https://intranet.eden.ph:8069, log in as `admin` / `admin` and **change the admin password immediately**.
 5. Give users hotel access: **Settings → Users → (user) → Hotel Management: Manager or User**, plus
    **Sales** rights (folios are sales orders, so hotel staff also need a Sales group).
-   The hotel modules don't assign these groups to anyone, not even `admin`; without them the app
-   fails with "You are not allowed to access 'Reservation' (hotel.reservation) records".
+   The hotel modules don't assign these groups to anyone; without them the app only shows
+   "Pdf Reports" or fails with "You are not allowed to access 'Reservation' (hotel.reservation)
+   records". `hotel_reservation_eden` gives `admin` Hotel Management / Manager automatically;
+   every other user still needs it set by hand.
 
 The database manager is disabled in production (`list_db = False`).
 
