@@ -109,6 +109,10 @@ missing=$(psql "$DB" "select name from unnest(array[$list]) as name
   where name not in (select name from ir_module_module where state='installed')")
 [[ -z "$missing" ]] || die "These modules are NOT installed: $(echo $missing). Check the output above."
 
+currencies=$(psql "$DB" "select string_agg(distinct cur.name, ',') from res_company c
+  join res_currency cur on cur.id = c.currency_id")
+[[ "$currencies" == PHP ]] || die "Company currency is $currencies, not PHP. Run scripts/fix_currency_php.py (see its header)."
+
 # --- 5. Start --------------------------------------------------------------------------------
 log "Starting the stack"
 $C up -d
