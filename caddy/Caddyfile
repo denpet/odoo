@@ -1,11 +1,13 @@
 {
-	# Internal-only host: certificates are obtained via DNS-01 on GoDaddy
-	acme_dns godaddy {env.GODADDY_API_TOKEN}
+	# Internal-only host: self-signed certificate from Caddy's own local CA (no Let's Encrypt).
+	# Root CA to install on clients: /data/caddy/pki/authorities/local/root.crt (caddy-data volume)
+	skip_install_trust
 }
 
 # TEMPORARY until go-live: Odoo is served on port 8069 only. At go-live change this back to
-# "{$DOMAIN} {" and the published port in compose.prod.yaml to 80/443.
+# "{$DOMAIN} {" and the published port in compose.prod.yaml to 443.
 {$DOMAIN}:8069 {
+	tls internal
 	encode zstd gzip
 
 	# Odoo real-time bus (gevent worker)

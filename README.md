@@ -9,7 +9,7 @@ compose.prod.yaml         prod stack  (Odoo + Postgres + Caddy HTTPS on intranet
 config/odoo.dev.conf      dev Odoo config
 config/odoo.prod.conf     prod Odoo config (secret, git-ignored; template: *.example)
 .env.prod                 prod secrets (git-ignored; template: .env.prod.example)
-caddy/                    Caddy image with GoDaddy DNS plugin + Caddyfile
+caddy/                    Caddyfile (stock Caddy image, self-signed TLS)
 addons/vertical-hotel/    git clone of OCA/vertical-hotel, branch 19.0
 addons/custom/            our own modules (tracked in this repo)
 ```
@@ -119,26 +119,26 @@ Reset everything: `docker compose down -v`.
 
 ## Production (intranet.eden.ph, internal network)
 
-TLS: the host is not reachable from the internet, so Caddy gets Let's Encrypt certificates via the
-**DNS-01 challenge** on GoDaddy (it creates a temporary `_acme-challenge` TXT record).
+TLS: the host is not reachable from the internet, so Caddy uses a **self-signed certificate** from
+its own local CA (`tls internal`, renewed automatically). Browsers warn until the root CA is trusted:
+copy it out with
+`docker compose -f compose.prod.yaml cp caddy:/data/caddy/pki/authorities/local/root.crt eden-intranet-ca.crt`
+and install it on the client PCs (Windows: double-click → Install Certificate → Local Machine →
+*Trusted Root Certification Authorities*). The root stays the same as long as the `caddy-data` volume is kept.
 
 Prerequisites
-1. GoDaddy production API key + secret (https://developer.godaddy.com/keys). Note: GoDaddy only grants
-   DNS API access to accounts meeting its requirements (e.g. 10+ domains or Discount Domain Club) -
-   check this first.
-2. Internal clients must resolve `intranet.eden.ph` to the server's internal IP
+1. Internal clients must resolve `intranet.eden.ph` to the server's internal IP
    (internal DNS record, or a public A record pointing to the private IP).
-3. Port 8069 open on the server for internal clients (and for the eden.ph nginx).
+2. Port 8069 open on the server for internal clients (and for the eden.ph nginx).
 
 **Temporary until go-live:** Odoo is served only at https://intranet.eden.ph:8069 (Caddy site
-`{$DOMAIN}:8069`, compose publishes 8069 only; 80 isn't needed because certificates use DNS-01).
-At go-live: change the Caddyfile site back to `{$DOMAIN}`, publish `80:80` and `443:443` instead
+`{$DOMAIN}:8069`, compose publishes 8069 only).
+At go-live: change the Caddyfile site back to `{$DOMAIN}`, publish `443:443` instead
 of 8069, update `web.base.url` (Settings → Technical → System Parameters) to
 `https://intranet.eden.ph`, and point the eden.ph nginx `proxy_pass` at port 443.
 
 Setup
-1. `.env.prod` and `config/odoo.prod.conf` have been generated with random passwords. Fill in
-   `GODADDY_API_TOKEN=KEY:SECRET` in `.env.prod`. Adjust `workers` in `config/odoo.prod.conf`
+1. `.env.prod` and `config/odoo.prod.conf` have been generated with random passwords. Adjust `workers` in `config/odoo.prod.conf`
    to the server (≈ CPU cores × 2 + 1).
 2. Initialise the database (Philippine accounting, PHP). Edit `scripts/setup_company_ph.py` first
    (legal name, TIN, address). Demo data is off by default.
@@ -154,7 +154,7 @@ Setup
    ```
    Then create the POS setups from the Point of Sale app (Restaurant / Bar cards); each new POS
    automatically gets the *Charge to Room* payment method.
-3. Start: `docker compose -f compose.prod.yaml up -d --build`
+3. Start: `docker compose -f compose.prod.yaml up -d`
 4. Open https://intranet.eden.ph:8069, log in as `admin` / `admin` and **change the admin password immediately**.
 5. Give users hotel access: **Settings → Users → (user) → Hotel Management: Manager or User**, plus
    **Sales** rights (folios are sales orders, so hotel staff also need a Sales group).

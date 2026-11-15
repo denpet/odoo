@@ -1,5 +1,5 @@
-# Production stack: Odoo 19 + PostgreSQL 17 behind Caddy (HTTPS via Let's Encrypt DNS-01 / GoDaddy)
-# Usage: docker compose -f compose.prod.yaml up -d --build
+# Production stack: Odoo 19 + PostgreSQL 17 behind Caddy (HTTPS, self-signed via Caddy's local CA)
+# Usage: docker compose -f compose.prod.yaml up -d
 services:
   db:
     image: postgres:17
@@ -34,13 +34,13 @@ services:
     restart: always
 
   caddy:
-    build: ./caddy
+    image: caddy:2.10
     depends_on:
       - odoo
     env_file: .env.prod
     ports:
-      # TEMPORARY until go-live: HTTPS on 8069 only (certificate via DNS-01, so 80 is not needed).
-      # At go-live: "80:80" and "443:443", and see caddy/Caddyfile.
+      # TEMPORARY until go-live: HTTPS on 8069 only (self-signed certificate).
+      # At go-live: "443:443", and see caddy/Caddyfile.
       - "8069:8069"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
