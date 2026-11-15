@@ -1,0 +1,54 @@
+# Production stack: Odoo 19 + PostgreSQL 17 behind Caddy (HTTPS via Let's Encrypt DNS-01 / GoDaddy)
+# Usage: docker compose -f compose.prod.yaml up -d --build
+services:
+  db:
+    image: postgres:17
+    env_file: .env.prod
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+    volumes:
+      - prod-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  odoo:
+    image: odoo:19.0
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env.prod
+    environment:
+      HOST: db
+      USER: odoo
+      # PASSWORD (DB password for Odoo) comes from .env.prod
+    volumes:
+      - prod-odoo-data:/var/lib/odoo
+      - ./config/odoo.prod.conf:/etc/odoo/odoo.conf:ro
+      - ./addons:/mnt/extra-addons:ro
+    # no published ports: only reachable through Caddy
+    restart: always
+
+  caddy:
+    build: ./caddy
+    depends_on:
+      - odoo
+    env_file: .env.prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: always
+
+volumes:
+  prod-db-data:
+  prod-odoo-data:
+  caddy-data:
+  caddy-config:

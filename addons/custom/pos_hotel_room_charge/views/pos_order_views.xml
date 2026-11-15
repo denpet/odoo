@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_pos_form_room_charge" model="ir.ui.view">
+        <field name="name">pos.order.form.room.charge</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <field name="session_id" position="after">
+                <field name="hotel_folio_id" invisible="not hotel_folio_id"/>
+                <field name="room_charge_label" invisible="not room_charge_label"/>
+            </field>
+        </field>
+    </record>
+</odoo>

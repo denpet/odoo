@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_hotel_folio_form_room_charge" model="ir.ui.view">
+        <field name="name">hotel.folio.form.room.charge</field>
+        <field name="model">hotel.folio</field>
+        <field name="inherit_id" ref="hotel.view_hotel_folio_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <div class="oe_button_box" name="room_charge_button_box" invisible="not pos_order_count">
+                    <button name="action_view_pos_room_charges" type="object" class="oe_stat_button" icon="fa-cutlery">
+                        <field name="pos_order_count" widget="statinfo" string="POS Charges"/>
+                    </button>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

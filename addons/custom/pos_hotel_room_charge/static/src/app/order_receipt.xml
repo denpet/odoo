@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pos_hotel_room_charge.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('before-footer')]" position="before">
+            <div t-if="order.room_charge_label and order.payment_ids.some((p) => p.payment_method_id?.is_room_charge)"
+                 class="pos-receipt-room-charge text-start pt-3">
+                <div class="fw-bolder">Charged to room</div>
+                <div t-esc="order.room_charge_label"/>
+                <div class="pt-4">Guest signature:</div>
+                <div class="pt-3">______________________________</div>
+            </div>
+        </xpath>
+    </t>
+</templates>
