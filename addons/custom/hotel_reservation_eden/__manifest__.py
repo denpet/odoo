@@ -1,7 +1,7 @@
 {
     "name": "Hotel Reservation - Eden fixes",
     "summary": "Usability fixes for OCA hotel_reservation without patching upstream",
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.1.1",
     "category": "Generic Modules/Hotel Reservation",
     "license": "LGPL-3",
     "author": "Eden",
