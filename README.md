@@ -9,7 +9,7 @@ compose.prod.yaml         prod stack  (Odoo + Postgres + Caddy HTTPS on intranet
 config/odoo.dev.conf      dev Odoo config
 config/odoo.prod.conf     prod Odoo config (secret, git-ignored; template: *.example)
 .env.prod                 prod secrets (git-ignored; template: .env.prod.example)
-caddy/                    Caddyfile (stock Caddy image, self-signed TLS)
+caddy/                    Caddyfile + Dockerfile (Caddy with GoDaddy DNS plugin, Let's Encrypt TLS)
 addons/vertical-hotel/    git clone of OCA/vertical-hotel, branch 19.0
 addons/custom/            our own modules (tracked in this repo)
 ```
@@ -122,12 +122,16 @@ Reset everything: `docker compose down -v`.
 
 ## Production (intranet.eden.ph, internal network)
 
-TLS: the host is not reachable from the internet, so Caddy uses a **self-signed certificate** from
-its own local CA (`tls internal`, renewed automatically). Browsers warn until the root CA is trusted:
-copy it out with
-`docker compose -f compose.prod.yaml cp caddy:/data/caddy/pki/authorities/local/root.crt eden-intranet-ca.crt`
-and install it on the client PCs (Windows: double-click → Install Certificate → Local Machine →
-*Trusted Root Certification Authorities*). The root stays the same as long as the `caddy-data` volume is kept.
+TLS: the host is not reachable from the internet, so Caddy gets a **Let's Encrypt** certificate with
+the **DNS-01** challenge: it creates the `_acme-challenge.intranet.eden.ph` TXT record through the
+GoDaddy API (eden.ph DNS is at GoDaddy) and renews automatically. Caddy is built with the
+[caddy-dns/godaddy](https://github.com/caddy-dns/godaddy) plugin (`caddy/Dockerfile`), so start the
+stack with `--build` after changing it. Client PCs need no extra root CA.
+Set `GODADDY_API_TOKEN=<API key>:<API secret>` in `.env.prod`: a **Production** key from
+https://developer.godaddy.com/keys on the account that owns eden.ph.
+
+Check issuing with `docker compose -f compose.prod.yaml logs caddy | grep -i certificate`. Certificates
+and the ACME account live in the `caddy-data` volume; keep it to avoid Let's Encrypt rate limits.
 
 Prerequisites
 1. Internal clients must resolve `intranet.eden.ph` to the server's internal IP

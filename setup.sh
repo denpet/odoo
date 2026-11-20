@@ -54,6 +54,8 @@ DOMAIN=intranet.eden.ph
 POSTGRES_PASSWORD=$pw
 # must equal POSTGRES_PASSWORD (Odoo container reads this name)
 PASSWORD=$pw
+# Let's Encrypt DNS-01 via GoDaddy: "<API key>:<API secret>" (Production key, developer.godaddy.com/keys)
+GODADDY_API_TOKEN=CHANGE_ME
 EOF
 fi
 
@@ -71,10 +73,14 @@ chmod 644 config/odoo.prod.conf
 
 DB_PASSWORD=$(grep '^POSTGRES_PASSWORD=' .env.prod | cut -d= -f2-)
 [[ -n "$DB_PASSWORD" && "$DB_PASSWORD" != CHANGE_ME ]] || die "Set POSTGRES_PASSWORD in .env.prod"
+GODADDY_TOKEN=$(grep '^GODADDY_API_TOKEN=' .env.prod | cut -d= -f2- || true)
+[[ "$GODADDY_TOKEN" == *:* ]] \
+  || die "Set GODADDY_API_TOKEN=<key>:<secret> in .env.prod (needed for the Let's Encrypt certificate)"
 
 # --- 3. Database --------------------------------------------------------------------------------
-log "Pulling images and starting PostgreSQL"
-$C pull
+log "Pulling images, building Caddy and starting PostgreSQL"
+$C pull --ignore-buildable
+$C build --pull caddy
 $C up -d --wait db
 
 psql() { $C exec -T db psql -U odoo -d "$1" -tAc "$2"; }
@@ -129,7 +135,6 @@ First-time steps:
   - Give users Hotel Management + Sales rights (Settings -> Users).
   - Set the Sirvoy secret in System Parameter hotel_sirvoy_webhook.token.
   - Create the POS setups (Point of Sale app); each gets the "Charge to Room" method.
-  - Trust Caddy's root CA on client PCs:
-      $C cp caddy:/data/caddy/pki/authorities/local/root.crt eden-intranet-ca.crt
+  - Check the certificate was issued: $C logs caddy | grep -i certificate
 EOF
 fi
