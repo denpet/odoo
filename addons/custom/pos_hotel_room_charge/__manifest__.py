@@ -1,7 +1,7 @@
 {
     "name": "POS Charge to Room (Hotel Folio)",
     "summary": "Charge Point of Sale orders to a checked-in guest's hotel folio",
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.1.0",
     "category": "Sales/Point of Sale",
     "license": "LGPL-3",
     "author": "Eden",

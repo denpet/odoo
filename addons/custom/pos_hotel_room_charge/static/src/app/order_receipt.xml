@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="pos_hotel_room_charge.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//t[@t-set='showTaxGroupLabels']" position="after">
+            <!-- VAT of a room charge is billed on the folio at checkout, not on this ticket. -->
+            <t t-set="isRoomCharge" t-value="order.payment_ids.some((p) => p.payment_method_id?.is_room_charge)"/>
+            <t t-set="showTaxGroupLabels" t-value="showTaxGroupLabels and !isRoomCharge"/>
+        </xpath>
+        <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="attributes">
+            <attribute name="t-if">taxTotals and taxTotals.has_tax_groups and !isRoomCharge</attribute>
+        </xpath>
+        <xpath expr="//div[hasclass('pos-receipt-qr')]" position="attributes">
+            <attribute name="t-if">order.company.point_of_sale_use_ticket_qr_code and order.finalized and !isRoomCharge</attribute>
+        </xpath>
         <xpath expr="//div[hasclass('before-footer')]" position="before">
-            <div t-if="order.room_charge_label and order.payment_ids.some((p) => p.payment_method_id?.is_room_charge)"
-                 class="pos-receipt-room-charge text-start pt-3">
+            <div t-if="isRoomCharge and order.room_charge_label" class="pos-receipt-room-charge text-start pt-3">
                 <div class="fw-bolder">Charged to room</div>
                 <div t-esc="order.room_charge_label"/>
+                <div class="pt-2" style="font-size: 75%;">This is not a receipt valid for tax return claims</div>
                 <div class="pt-4">Guest signature:</div>
                 <div class="pt-3">______________________________</div>
             </div>

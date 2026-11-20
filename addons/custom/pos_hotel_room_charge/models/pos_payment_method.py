@@ -14,9 +14,9 @@ class PosPaymentMethod(models.Model):
         "product.product",
         "Room Charge Product",
         domain=[("type", "=", "service")],
-        help="Product used for the folio lines. It must have no taxes, and its income account "
-        "must be this method's Outstanding Account (the Guest Ledger clearing account), "
-        "so revenue and VAT are booked once, by the POS.",
+        help="Service product used for the folio lines. Each line keeps the VAT and income "
+        "account of the product sold in the POS, so revenue and VAT are booked once, by the "
+        "folio invoice at checkout.",
     )
 
     @api.constrains("is_room_charge", "room_charge_product_id", "journal_id", "outstanding_account_id")
@@ -26,24 +26,13 @@ class PosPaymentMethod(models.Model):
                 raise ValidationError(self.env._("A Charge to Room method needs a Bank journal."))
             if method.split_transactions:
                 raise ValidationError(self.env._("A Charge to Room method can't split transactions."))
-            product = method.room_charge_product_id.with_company(method.company_id)
+            product = method.room_charge_product_id
             if not product:
                 raise ValidationError(self.env._("Set a Room Charge Product on %s.", method.name))
-            if product.taxes_id.filtered(lambda t: t.company_id == method.company_id):
+            if product.type != "service":
                 raise ValidationError(
-                    self.env._("Room Charge Product %s must have no taxes (VAT is booked by the POS).",
-                               product.display_name)
-                )
-            income = product.property_account_income_id or product.categ_id.property_account_income_categ_id
-            if not method.outstanding_account_id or income != method.outstanding_account_id:
-                raise ValidationError(
-                    self.env._(
-                        "The Outstanding Account of %(method)s and the income account of %(product)s "
-                        "must be the same Guest Ledger clearing account, otherwise room charges "
-                        "would be booked twice.",
-                        method=method.name,
-                        product=product.display_name,
-                    )
+                    self.env._("Room Charge Product %s must be a service, so the folio doesn't "
+                               "deliver the items a second time.", product.display_name)
                 )
 
     @api.model

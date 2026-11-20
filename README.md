@@ -44,15 +44,18 @@ Lets the POS (restaurant with tables or plain counter) charge an order to a chec
 
 - POS payment screen → **Charge to Room** → pick the room/guest. It must be the only payment on the order;
   refunds work the same way and add negative lines.
-- Each item is added to the folio as its own line (price incl. VAT) and is invoiced at checkout.
-  The folio gets a **POS Charges** button; the receipt shows the room and a guest signature line.
+- Each item is added to the folio as its own line, with the POS price, discount and VAT, and is invoiced
+  at checkout. The folio gets a **POS Charges** button; the receipt shows the room and a guest signature
+  line, but no VAT breakdown (the VAT is on the statement of account at checkout).
 - Only folios that are not cancelled and where now is between check-in and check-out can be charged.
 
-Accounting (Guest Ledger clearing account):
-POS session close books revenue + VAT and debits *Guest Ledger (Room Charges)*; the folio invoice uses
-the no-tax product *Restaurant / POS Room Charge* whose income account is that same clearing account, so
-it moves the amount to the guest's receivable without booking revenue twice. The clearing account
-should be zero for guests that have checked out and been invoiced.
+Accounting (VAT booked at checkout):
+The POS session close leaves room-charge orders out of its journal entry, so no revenue, VAT or payment
+is booked at the POS (stock moves are still valued by the session). The folio lines use the service
+product *Restaurant / POS Room Charge* (so nothing is delivered twice) but carry the sold product's VAT
+and income account; the folio invoice books revenue and output VAT when the guest checks out.
+Orders charged before module version 19.0.1.1.0 were booked the old way (revenue + VAT at the POS,
+via the *Guest Ledger (Room Charges)* clearing account) and are still settled that way.
 
 On install it creates, per company: the clearing account, a *Room Charges* bank journal, the product and
 the *Charge to Room* payment method, and adds the method to every POS **without an open session**.

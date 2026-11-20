@@ -1,6 +1,6 @@
 from odoo import Command, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools import float_compare, float_is_zero, float_round
+from odoo.tools import float_is_zero
 
 
 class PosOrder(models.Model):
@@ -9,6 +9,13 @@ class PosOrder(models.Model):
     # Set by the POS frontend. Plain integer because the POS does not load hotel.folio.
     room_charge_folio_ref = fields.Integer(copy=False)
     room_charge_label = fields.Char("Charged To", copy=False, readonly=True)
+    room_charge_vat_on_folio = fields.Boolean(
+        "Booked on Folio",
+        copy=False,
+        readonly=True,
+        help="Revenue and VAT of this order are booked by the folio invoice at checkout, "
+        "so the POS session leaves the order out of its journal entry.",
+    )
     hotel_folio_id = fields.Many2one(
         "hotel.folio",
         "Hotel Folio",
@@ -64,26 +71,24 @@ class PosOrder(models.Model):
         return res
 
     def _room_charge_line_vals(self, line, product):
-        """Itemised folio line, tax included, using the no-tax clearing product."""
+        """Itemised folio line with the POS line's price, discount and VAT.
+
+        The folio uses the generic service product (so no second delivery is created), and
+        remembers the income account the POS would have used for the folio invoice.
+        """
         name = line.full_product_name or line.product_id.display_name
         if line.customer_note:
             name = f"{name} ({line.customer_note})"
         name = f"{name} [{self.pos_reference or self.name}]"
-        qty = line.qty
-        total = line.price_subtotal_incl
-        digits = self.env["decimal.precision"].precision_get("Product Price")
-        price = float_round(total / qty, precision_digits=digits)
-        if float_compare(self.currency_id.round(price * qty), total, precision_rounding=self.currency_id.rounding):
-            # Unit price can't be expressed exactly: keep the amount right, show qty in the text.
-            name = f"{qty:g} x {name}"
-            sign = 1 if qty > 0 else -1
-            qty, price = sign, total * sign
+        base_line = line._prepare_base_line_for_taxes_computation()
         return {
             "product_id": product.id,
             "name": name,
-            "product_uom_qty": qty,
-            "price_unit": price,
-            "tax_ids": [Command.clear()],
+            "product_uom_qty": line.qty,
+            "price_unit": line.price_unit,
+            "discount": line.discount,
+            "tax_ids": [Command.set(line.tax_ids_after_fiscal_position.ids)],
+            "room_charge_account_id": base_line["account_id"].id,
         }
 
     def _room_charge_post_to_folio(self):
@@ -93,25 +98,27 @@ class PosOrder(models.Model):
                 continue
             folio = order.hotel_folio_id.sudo()
             product = payments[0].payment_method_id.room_charge_product_id
-            sol_vals = []
-            for line in order.lines:
-                if float_is_zero(line.qty, precision_digits=6) or line.currency_id.is_zero(line.price_subtotal_incl):
-                    continue
-                sol_vals.append({**order._room_charge_line_vals(line, product), "order_id": folio.order_id.id})
-            if not sol_vals:
-                continue
-            sols = self.env["sale.order.line"].sudo().create(sol_vals)
-            self.env["hotel.service.line"].sudo().create([
+            line_vals = [
                 {
+                    **order._room_charge_line_vals(line, product),
+                    # One create, so the inherited sale line keeps the POS VAT (writing
+                    # order_id afterwards would recompute it from the product).
                     "folio_id": folio.id,
-                    "service_line_id": sol.id,
                     "pos_order_id": order.id,
                     "ser_checkin_date": order.date_order,
                     "ser_checkout_date": order.date_order,
                 }
-                for sol in sols
-            ])
-            vals = {"room_charge_label": order.room_charge_label or folio._room_charge_label()}
+                for line in order.lines
+                if not float_is_zero(line.qty, precision_digits=6)
+                and not line.currency_id.is_zero(line.price_subtotal_incl)
+            ]
+            if not line_vals:
+                continue
+            self.env["hotel.service.line"].sudo().create(line_vals)
+            vals = {
+                "room_charge_label": order.room_charge_label or folio._room_charge_label(),
+                "room_charge_vat_on_folio": True,
+            }
             if not order.partner_id:
                 vals["partner_id"] = folio.partner_id.id
             order.write(vals)
