@@ -64,8 +64,10 @@ if [[ ! -f config/odoo.prod.conf ]]; then
   sed -e "s/^admin_passwd = .*/admin_passwd = $(randpw 32)/" \
       -e "s/^workers = .*/workers = $workers/" \
       config/odoo.prod.conf.example > config/odoo.prod.conf
-  chmod 644 config/odoo.prod.conf   # must be readable by the odoo user in the container
 fi
+# Always enforce: the odoo user in the container (uid 100) must be able to read the bind-mounted file.
+# A 600 file makes the entrypoint fail with "No section: 'options'".
+chmod 644 config/odoo.prod.conf
 
 DB_PASSWORD=$(grep '^POSTGRES_PASSWORD=' .env.prod | cut -d= -f2-)
 [[ -n "$DB_PASSWORD" && "$DB_PASSWORD" != CHANGE_ME ]] || die "Set POSTGRES_PASSWORD in .env.prod"
